@@ -388,14 +388,6 @@ function updateApiStatus() {
   if (document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = key;
 }
 
-function saveWorkerUrl() {
-  const url = document.getElementById('workerUrlInput').value.trim();
-  setWorkerUrl(url);
-  const s = document.getElementById('workerStatus');
-  s.className = 'api-status ' + (customProxyUrl ? 'ok' : 'none');
-  showToast('آدرس Worker ذخیره شد ✅', 'success');
-}
-
 async function testAI() {
   const key = getApiKey();
   if (!key) { showToast('لطفاً اول کلید Groq رو وارد کن', 'error'); return; }
@@ -776,56 +768,115 @@ function renderResumeHTML(tpl, mini = false) {
   return html;
 }
 
-// ─── Cloudflare Worker Proxy ───
-let customProxyUrl = localStorage.getItem('cf_worker_url') || '';
+// ─── Cloudflare Worker Proxy (مثل Ai_Chat_With_Api) ───
+let customProxyUrl = '';
 
-function getWorkerUrl() { return customProxyUrl; }
-function setWorkerUrl(url) {
-  customProxyUrl = url.replace(/\/?$/, '').replace(/\?url=$/, '');
-  if (customProxyUrl && !customProxyUrl.endsWith('?url=')) {
-    customProxyUrl += '?url=';
-  }
-  localStorage.setItem('cf_worker_url', customProxyUrl);
+function loadProxyUrl() {
+  try {
+    const saved = localStorage.getItem('resume_builder_proxy');
+    if (saved) {
+      customProxyUrl = saved;
+      console.log('[Proxy] Loaded:', customProxyUrl.slice(0, 60));
+    }
+  } catch (e) {}
 }
 
-// ─── Smart Fetch ───
+function setWorkerUrl(url) {
+  customProxyUrl = url.trim();
+  // اطمینان از وجود ?url=
+  if (customProxyUrl && !customProxyUrl.includes('?url=')) {
+    if (customProxyUrl.includes('?')) {
+      if (!customProxyUrl.endsWith('&')) customProxyUrl += '&';
+      customProxyUrl += 'url=';
+    } else {
+      customProxyUrl += '?url=';
+    }
+  }
+  localStorage.setItem('resume_builder_proxy', customProxyUrl);
+  console.log('[Proxy] Saved:', customProxyUrl.slice(0, 60));
+}
+
+function saveWorkerUrl() {
+  const url = document.getElementById('workerUrlInput').value.trim();
+  setWorkerUrl(url);
+  const s = document.getElementById('workerStatus');
+  s.className = 'api-status ' + (customProxyUrl ? 'ok' : 'none');
+  showToast('آدرس Worker ذخیره شد ✅', 'success');
+}
+
+// ─── Smart Fetch (exact copy from Ai_Chat_With_Api) ───
 async function smartFetch(url, opts = {}) {
-  // اگه Worker تنظیم شده، اول از Worker استفاده کن (مطمئن‌تره)
-  if (customProxyUrl) {
+  const logUrl = url.replace(/([?&])(key|api_key|token|authorization)=[^&]*/gi, '$1$2=***');
+  console.log('[SmartFetch]', logUrl.slice(0, 120));
+
+  if (opts.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+  const isPost = opts.method && opts.method.toUpperCase() === 'POST';
+
+  // Strategy: Worker-first for POST (browser CORS blocks cross-origin POST)
+  // Direct fetch from browser to API endpoints always fails for POST due to CORS.
+  // Worker proxy is the ONLY reliable path for POST requests.
+
+  // Step 1: Try Worker proxy FIRST for POST requests (if Worker URL is configured)
+  if (isPost && customProxyUrl) {
+    if (opts.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     try {
       const proxyUrl = customProxyUrl + encodeURIComponent(url);
+      console.log('[SmartFetch] → Worker:', proxyUrl.slice(0, 150));
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 30000);
-      const fetchOpts = {
-        method: opts.method || 'GET',
-        body: opts.body,
-        headers: opts.headers,
-        signal: ctrl.signal
-      };
-      const r = await fetch(proxyUrl, fetchOpts);
+      const timer = setTimeout(() => ctrl.abort(), 25000);
+      if (opts.signal) opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
+      const r = await fetch(proxyUrl, { ...opts, signal: ctrl.signal });
       clearTimeout(timer);
+      if (r.status === 502) {
+        const err = await r.json().catch(() => ({}));
+        console.log('[SmartFetch] Worker 502:', err.error);
+        throw new Error('Worker نتونست API رو صدا بزنه: ' + (err.error || 'HTTP 502'));
+      }
       if (!r.ok) {
         const errBody = await r.text().catch(() => '');
-        throw new Error('HTTP ' + r.status + ': ' + errBody.slice(0, 150));
+        console.log('[SmartFetch] Worker HTTP ' + r.status + ':', errBody.slice(0, 300));
+        try {
+          const errJson = JSON.parse(errBody);
+          if (errJson._proxy && errJson._error) {
+            let apiErr = errJson._error;
+            try {
+              const apiErrJson = JSON.parse(apiErr);
+              const msg = apiErrJson.error?.message || apiErrJson.message || apiErrJson.error || apiErr;
+              throw new Error(`API خطا (HTTP ${r.status}): ${msg}`);
+            } catch (parseErr) {
+              if (parseErr.message.startsWith('API خطا')) throw parseErr;
+              throw new Error(`API خطا (HTTP ${r.status}): ${apiErr.slice(0, 300)}`);
+            }
+          }
+          if (errJson.error) {
+            throw new Error(`API خطا: ${typeof errJson.error === 'string' ? errJson.error : errJson.error.message || JSON.stringify(errJson.error)}`);
+          }
+        } catch (e) {
+          if (e.message.startsWith('API خطا')) throw e;
+        }
+        throw new Error(`Worker خطا (HTTP ${r.status}): ${errBody.slice(0, 150)}`);
       }
+      console.log('[SmartFetch] ✅ Worker proxied, API returned ' + r.status);
       return r;
     } catch (e) {
-      if (e.name === 'AbortError') throw new Error('timeout');
-      console.log('[Worker] failed:', e.message);
-      throw new Error('Worker خطا: ' + e.message);
+      if (opts.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      console.log('[SmartFetch] Worker failed:', e.message);
+      throw e;
     }
   }
 
-  // اگه Worker نداری، مستقیم امتحان کن
+  // Step 2: Direct fetch (for GET requests or when no Worker)
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 15000);
+    if (opts.signal) opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
     const r = await fetch(url, { ...opts, signal: ctrl.signal });
     clearTimeout(timer);
     return r;
   } catch (e) {
     console.log('[Direct] failed:', e.message);
-    throw new Error('اتصال ناموفق — لطفاً Cloudflare Worker رو تنظیم کن (از منوی پراکسی)');
+    throw new Error('اتصال ناموفق — لطفاً Cloudflare Worker رو تنظیم کن');
   }
 }
 
@@ -1050,8 +1101,7 @@ function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.
 async function init() {
   loadTheme();
   updateApiStatus();
-  // Worker URL
-  customProxyUrl = localStorage.getItem('cf_worker_url') || '';
+  loadProxyUrl();
   const workerInput = document.getElementById('workerUrlInput');
   if (workerInput) workerInput.value = customProxyUrl;
   const ws = document.getElementById('workerStatus');
