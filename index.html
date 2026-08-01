@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رزومه‌ساز هوشمند AI</title>
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#6c5ce7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- /PWA -->
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0b10;--bg2:#13151f;--card:#1a1d2b;--card-hover:#22263a;--border:#2a2e42;--text:#e8eaed;--text2:#8b90a5;--accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.25);--success:#00b894;--danger:#e17055;--warning:#fdcb6e;--radius:16px;--shadow:0 4px 24px rgba(0,0,0,.4);--font:'Vazirmatn',system-ui,sans-serif}
+[data-theme="light"]{--bg:#f0f2f5;--bg2:#ffffff;--card:#ffffff;--card-hover:#f5f6fa;--border:#e0e3e8;--text:#1a1d27;--text2:#5f6577;--shadow:0 4px 24px rgba(0,0,0,.06);--accent-glow:rgba(108,92,231,.12)}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);transition:background .3s,color .3s}
+a{color:var(--accent);text-decoration:none}
+.app{min-height:100vh;display:flex;flex-direction:column}
+
+/* ═══ HEADER ═══ */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.header h1{font-size:1.3rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:center;gap:8px}
+.header-actions{display:flex;gap:8px;align-items:center}
+
+/* ═══ BUTTONS ═══ */
+.btn{padding:10px 22px;border:none;border-radius:12px;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:6px}
+.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;box-shadow:0 2px 12px rgba(108,92,231,.3)}.btn-primary:hover{box-shadow:0 4px 20px rgba(108,92,231,.45);transform:translateY(-1px)}
+.btn-success{background:linear-gradient(135deg,var(--success),#00d2a0);color:#fff;box-shadow:0 2px 12px rgba(0,184,148,.3)}
+.btn-danger{background:linear-gradient(135deg,var(--danger),#f0825e);color:#fff}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--accent-glow);color:var(--text);border-color:var(--accent)}
+.btn-sm{padding:7px 14px;font-size:.8rem;border-radius:10px}
+.btn-icon{width:38px;height:38px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.theme-toggle{background:none;border:1px solid var(--border);color:var(--text);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;transition:all .3s}.theme-toggle:hover{background:var(--accent-glow);border-color:var(--accent);transform:rotate(30deg)}
+
+/* ═══ MAIN ═══ */
+.main{flex:1;padding:24px;max-width:900px;margin:0 auto;width:100%}
+
+/* ═══ STEPPER ═══ */
+.stepper{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:32px;flex-wrap:wrap}
+.step-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;border:2px solid var(--border);color:var(--text2);transition:all .3s;cursor:pointer;position:relative}
+.step-dot.active{background:linear-gradient(135deg,var(--accent),#7c6cf0);border-color:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(108,92,231,.4)}
+.step-dot.done{background:var(--success);border-color:var(--success);color:#fff}
+.step-dot:hover{transform:scale(1.1)}
+.step-line{width:40px;height:2px;background:var(--border);transition:background .3s}
+.step-line.done{background:var(--success)}
+.step-label{font-size:.65rem;color:var(--text2);position:absolute;top:42px;white-space:nowrap;font-weight:500}
+
+/* ═══ FORM ═══ */
+.form-section{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.form-section h2{font-size:1.3rem;font-weight:700;margin-bottom:6px}
+.form-section p{color:var(--text2);font-size:.85rem;margin-bottom:24px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:.82rem;font-weight:600;margin-bottom:6px;color:var(--text2)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}}
+.input{width:100%;padding:11px 16px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);font:inherit;font-size:.85rem;transition:all .25s}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+textarea.input{min-height:90px;resize:vertical;line-height:1.6}
+select.input{cursor:pointer}
+
+/* ═══ CARD ═══ */
+.card{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-header h3{font-size:1rem;font-weight:700}
+
+/* ═══ ENTRY (experience, education) ═══ */
+.entry-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;position:relative;transition:all .3s}
+.entry-card:hover{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-glow)}
+.entry-remove{position:absolute;top:12px;left:12px;background:var(--danger);color:#fff;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;transition:all .2s}.entry-remove:hover{transform:scale(1.15)}
+
+/* ═══ SKILL TAGS ═══ */
+.skill-input-wrap{display:flex;gap:8px;margin-bottom:12px}
+.skill-input-wrap .input{flex:1}
+.skill-tags{display:flex;flex-wrap:wrap;gap:6px}
+.skill-tag{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:600;background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;animation:popIn .2s ease}
+@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+.skill-tag button{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:.9rem;padding:0;margin-right:2px}.skill-tag button:hover{color:#fff}
+
+/* ═══ AI BUTTON ═══ */
+.btn-ai{background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff;box-shadow:0 2px 12px rgba(240,147,251,.3);position:relative;overflow:hidden}
+.btn-ai:hover{box-shadow:0 4px 20px rgba(240,147,251,.5);transform:translateY(-1px)}
+.btn-ai::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transform:translateX(-100%);transition:transform .6s}
+.btn-ai:hover::after{transform:translateX(100%)}
+.btn-ai.loading{opacity:.7;pointer-events:none}
+
+/* ═══ TEMPLATE SELECTOR ═══ */
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.template-card{border:2px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .3s;text-align:center;background:var(--card)}
+.template-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+.template-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+.template-card .preview{height:260px;border-radius:8px;margin-bottom:10px;overflow:hidden;position:relative;background:#fff}
+.template-card .name{font-size:.85rem;font-weight:600}
+
+/* ═══ RESUME PREVIEW ═══ */
+.preview-container{display:flex;gap:24px;align-items:flex-start}
+@media(max-width:900px){.preview-container{flex-direction:column}}
+.preview-controls{min-width:200px;display:flex;flex-direction:column;gap:10px}
+.resume-preview{flex:1;background:#fff;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.3);overflow:hidden;max-width:700px;margin:0 auto}
+.resume-page{padding:40px;min-height:900px;color:#1a1a2e;font-family:'Vazirmatn',sans-serif;direction:rtl;text-align:right;line-height:1.7}
+
+/* ═══ TEMPLATE STYLES ═══ */
+/* Template: Modern */
+.tpl-modern .r-header{text-align:center;padding-bottom:20px;border-bottom:3px solid #6c5ce7;margin-bottom:24px}
+.tpl-modern .r-name{font-size:1.8rem;font-weight:800;color:#1a1a2e;margin-bottom:4px}
+.tpl-modern .r-title{font-size:1rem;color:#6c5ce7;font-weight:600;margin-bottom:8px}
+.tpl-modern .r-contact{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;font-size:.8rem;color:#555}
+.tpl-modern .r-section{margin-bottom:22px}
+.tpl-modern .r-section-title{font-size:1rem;font-weight:700;color:#6c5ce7;border-bottom:2px solid #6c5ce7;padding-bottom:4px;margin-bottom:12px}
+.tpl-modern .r-item{margin-bottom:14px}
+.tpl-modern .r-item-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.tpl-modern .r-item-title{font-weight:700;font-size:.9rem;color:#1a1a2e}
+.tpl-modern .r-item-sub{font-size:.8rem;color:#6c5ce7;font-weight:500}
+.tpl-modern .r-item-date{font-size:.75rem;color:#888;font-weight:500}
+.tpl-modern .r-item-desc{font-size:.82rem;color:#444;line-height:1.7}
+.tpl-modern .r-skills{display:flex;flex-wrap:wrap;gap:6px}
+.tpl-modern .r-skill{padding:4px 12px;background:#f0edff;color:#6c5ce7;border-radius:20px;font-size:.75rem;font-weight:600}
+
+/* Template: Classic */
+.tpl-classic .r-header{border-bottom:2px solid #2d3436;padding-bottom:16px;margin-bottom:24px}
+.tpl-classic .r-name{font-size:1.7rem;font-weight:800;color:#2d3436}
+.tpl-classic .r-title{font-size:.95rem;color:#636e72;margin-bottom:8px}
+.tpl-classic .r-contact{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:#636e72}
+.tpl-classic .r-section{margin-bottom:20px}
+.tpl-classic .r-section-title{font-size:.95rem;font-weight:700;color:#2d3436;background:#f5f5f5;padding:6px 12px;border-right:4px solid #2d3436;margin-bottom:12px}
+.tpl-classic .r-item{margin-bottom:14px;padding-right:12px;border-right:2px solid #ddd}
+.tpl-classic .r-item-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.tpl-classic .r-item-title{font-weight:700;font-size:.9rem;color:#2d3436}
+.tpl-classic .r-item-sub{font-size:.8rem;color:#636e72}
+.tpl-classic .r-item-date{font-size:.75rem;color:#999}
+.tpl-classic .r-item-desc{font-size:.82rem;color:#555;line-height:1.7}
+.tpl-classic .r-skills{display:flex;flex-wrap:wrap;gap:6px}
+.tpl-classic .r-skill{padding:4px 12px;background:#eee;color:#2d3436;border-radius:4px;font-size:.75rem;font-weight:600}
+
+/* Template: Creative */
+.tpl-creative .r-header{background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;padding:24px;border-radius:8px;margin-bottom:24px;text-align:center}
+.tpl-creative .r-name{font-size:1.8rem;font-weight:800}
+.tpl-creative .r-title{font-size:1rem;opacity:.9;margin-bottom:8px}
+.tpl-creative .r-contact{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;font-size:.8rem;opacity:.85}
+.tpl-creative .r-section{margin-bottom:22px}
+.tpl-creative .r-section-title{font-size:1rem;font-weight:700;color:#6c5ce7;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.tpl-creative .r-section-title::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,#6c5ce7,transparent)}
+.tpl-creative .r-item{margin-bottom:14px;background:#f8f7ff;padding:12px;border-radius:8px;border-right:4px solid #6c5ce7}
+.tpl-creative .r-item-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.tpl-creative .r-item-title{font-weight:700;font-size:.9rem;color:#1a1a2e}
+.tpl-creative .r-item-sub{font-size:.8rem;color:#6c5ce7;font-weight:500}
+.tpl-creative .r-item-date{font-size:.75rem;color:#888}
+.tpl-creative .r-item-desc{font-size:.82rem;color:#444;line-height:1.7}
+.tpl-creative .r-skills{display:flex;flex-wrap:wrap;gap:6px}
+.tpl-creative .r-skill{padding:4px 14px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-radius:20px;font-size:.75rem;font-weight:600}
+
+/* Template: Minimal */
+.tpl-minimal .r-header{margin-bottom:24px}
+.tpl-minimal .r-name{font-size:1.6rem;font-weight:800;color:#1a1a2e;letter-spacing:-.02em}
+.tpl-minimal .r-title{font-size:.9rem;color:#888;margin-bottom:8px}
+.tpl-minimal .r-contact{display:flex;gap:16px;flex-wrap:wrap;font-size:.78rem;color:#999}
+.tpl-minimal .r-section{margin-bottom:20px}
+.tpl-minimal .r-section-title{font-size:.75rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.tpl-minimal .r-item{margin-bottom:14px}
+.tpl-minimal .r-item-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
+.tpl-minimal .r-item-title{font-weight:600;font-size:.88rem;color:#1a1a2e}
+.tpl-minimal .r-item-sub{font-size:.78rem;color:#888}
+.tpl-minimal .r-item-date{font-size:.72rem;color:#bbb}
+.tpl-minimal .r-item-desc{font-size:.8rem;color:#555;line-height:1.7}
+.tpl-minimal .r-skills{display:flex;flex-wrap:wrap;gap:6px}
+.tpl-minimal .r-skill{padding:3px 10px;border:1px solid #ddd;color:#555;border-radius:4px;font-size:.72rem}
+
+/* ═══ TEMPLATE PREVIEW MINI ═══ */
+.tpl-mini{transform:scale(0.35);transform-origin:top center;width:600px;pointer-events:none;position:absolute;top:0;left:50%;margin-left:-300px}
+.tpl-mini .r-page{padding:20px;min-height:400px;font-size:10px}
+
+/* ═══ NAV ═══ */
+.form-nav{display:flex;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+
+/* ═══ TOAST ═══ */
+.toast-container{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{padding:14px 28px;border-radius:14px;color:#fff;font-size:.88rem;font-weight:500;pointer-events:auto;animation:slideIn .4s cubic-bezier(.4,0,.2,1);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.toast-success{background:linear-gradient(135deg,var(--success),#00d2a0)}.toast-error{background:linear-gradient(135deg,var(--danger),#f0825e)}.toast-info{background:linear-gradient(135deg,var(--accent),#7c6cf0)}
+@keyframes slideIn{from{opacity:0;transform:translateY(-16px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--card);border-radius:var(--radius);padding:28px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;border:1px solid var(--border);box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.modal h3{margin-bottom:18px;font-weight:700}
+
+/* ═══ EMPTY STATE ═══ */
+.empty{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty .icon{font-size:3rem;margin-bottom:12px;opacity:.5}
+.empty p{margin-top:8px;font-size:.9rem}
+
+/* ═══ MY RESUMES ═══ */
+.resume-list{display:grid;gap:12px}
+.resume-item{display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);transition:all .25s}
+.resume-item:hover{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-glow)}
+.resume-item-info{display:flex;align-items:center;gap:12px}
+.resume-item-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7c6cf0);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.resume-item-name{font-weight:600;font-size:.9rem}
+.resume-item-date{font-size:.75rem;color:var(--text2)}
+.resume-item-actions{display:flex;gap:6px}
+
+/* ═══ API KEY BAR ═══ */
+.api-bar{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.api-bar label{font-size:.82rem;font-weight:600;color:var(--text2);white-space:nowrap}
+.api-bar .input{flex:1;min-width:200px}
+.api-bar .btn{white-space:nowrap}
+.api-status{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.api-status.ok{background:var(--success)}.api-status.err{background:var(--danger)}.api-status.none{background:var(--text2)}
+
+.hidden{display:none!important}
+
+@media(max-width:768px){
+  .main{padding:16px}
+  .form-nav{flex-direction:column;gap:8px}
+  .form-nav .btn{width:100%;justify-content:center}
+  .preview-container{flex-direction:column}
+  .stepper{gap:2px}
+  .step-line{width:20px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ═══ HEADER ═══ -->
+  <header class="header">
+    <h1>📄 رزومه‌ساز هوشمند AI</h1>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" onclick="showMyResumes()" id="myResumesBtn">📋 رزومه‌های من</button>
+      <button class="theme-toggle" onclick="toggleTheme()" title="تغییر تم">🌙</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- ═══ API KEY ═══ -->
+    <div class="api-bar" id="apiBar">
+      <div class="api-status none" id="apiStatus"></div>
+      <label>🔑 کلید Gemini API:</label>
+      <input type="password" class="input" id="apiKeyInput" placeholder="AIza..." dir="ltr">
+      <button class="btn btn-sm btn-ghost" onclick="saveApiKey()">ذخیره</button>
+      <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn-sm btn-ghost">دریافت رایگان ↗</a>
+    </div>
+
+    <!-- ═══ STEPPER ═══ -->
+    <div class="stepper" id="stepper"></div>
+
+    <!-- ═══ FORM AREA ═══ -->
+    <div id="formArea"></div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// رزومه‌ساز هوشمند AI — v1.0
+// ═══════════════════════════════════════════════
+
+// ─── State ───
+const STEPS = ['اطلاعات شخصی','سابقه کاری','تحصیلات','مهارت‌ها','خلاصه','قالب و خروجی'];
+let currentStep = 0;
+let resumeData = {
+  personal: { name:'', title:'', email:'', phone:'', location:'', website:'', linkedin:'', photo:'' },
+  experience: [],
+  education: [],
+  skills: [],
+  languages: [],
+  summary: '',
+  template: 'modern'
+};
+let savedResumes = [];
+let db = null;
+
+// ─── IndexedDB ───
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('ResumeBuilderDB', 1);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('resumes')) d.createObjectStore('resumes', { keyPath: 'id' });
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e);
+  });
+}
+
+async function saveToDB() {
+  if (!db) await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumes', 'readwrite');
+    const store = tx.objectStore('resumes');
+    const item = { id: 'current', data: JSON.parse(JSON.stringify(resumeData)), updatedAt: Date.now() };
+    store.put(item);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+async function loadFromDB() {
+  if (!db) await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumes', 'readonly');
+    const store = tx.objectStore('resumes');
+    const req = store.get('current');
+    req.onsuccess = () => resolve(req.result ? req.result.data : null);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+async function saveNamedResume(name) {
+  if (!db) await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumes', 'readwrite');
+    const store = tx.objectStore('resumes');
+    const id = 'resume_' + Date.now();
+    const item = { id, name, data: JSON.parse(JSON.stringify(resumeData)), createdAt: Date.now() };
+    store.put(item);
+    tx.oncomplete = () => { showToast('رزومه ذخیره شد ✅', 'success'); resolve(); };
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+async function loadNamedResumes() {
+  if (!db) await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumes', 'readonly');
+    const store = tx.objectStore('resumes');
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result.filter(r => r.id !== 'current'));
+    req.onerror = (e) => reject(e);
+  });
+}
+
+async function deleteNamedResume(id) {
+  if (!db) await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumes', 'readwrite');
+    const store = tx.objectStore('resumes');
+    store.delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+async function loadResumeData(id) {
+  if (!db) await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumes', 'readonly');
+    const store = tx.objectStore('resumes');
+    const req = store.get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+// ─── API Key ───
+function getApiKey() { return localStorage.getItem('gemini_api_key') || ''; }
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (key) {
+    localStorage.setItem('gemini_api_key', key);
+    updateApiStatus();
+    showToast('کلید ذخیره شد ✅', 'success');
+  }
+}
+function updateApiStatus() {
+  const s = document.getElementById('apiStatus');
+  const key = getApiKey();
+  s.className = 'api-status ' + (key ? 'ok' : 'none');
+  document.getElementById('apiKeyInput').value = key;
+}
+
+// ─── Theme ───
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+  localStorage.setItem('theme', next);
+}
+function loadTheme() {
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.querySelector('.theme-toggle').textContent = t === 'dark' ? '🌙' : '☀️';
+}
+
+// ─── Toast ───
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ─── Modal ───
+function showModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.add('hidden');
+}
+
+// ─── Stepper ───
+function renderStepper() {
+  const el = document.getElementById('stepper');
+  el.innerHTML = STEPS.map((s, i) => {
+    let cls = 'step-dot';
+    if (i === currentStep) cls += ' active';
+    else if (i < currentStep) cls += ' done';
+    const line = i < STEPS.length - 1 ? `<div class="step-line ${i < currentStep ? 'done' : ''}"></div>` : '';
+    return `<div class="${cls}" onclick="goToStep(${i})" title="${s}">${i < currentStep ? '✓' : i + 1}<span class="step-label">${s}</span></div>${line}`;
+  }).join('');
+}
+
+function goToStep(step) {
+  if (step >= 0 && step < STEPS.length) {
+    currentStep = step;
+    render();
+  }
+}
+
+// ─── Render ───
+function render() {
+  renderStepper();
+  const area = document.getElementById('formArea');
+  switch (currentStep) {
+    case 0: renderPersonal(area); break;
+    case 1: renderExperience(area); break;
+    case 2: renderEducation(area); break;
+    case 3: renderSkills(area); break;
+    case 4: renderSummary(area); break;
+    case 5: renderTemplate(area); break;
+  }
+}
+
+// ─── Step 0: Personal ───
+function renderPersonal(area) {
+  const p = resumeData.personal;
+  area.innerHTML = `
+    <div class="form-section">
+      <h2>👤 اطلاعات شخصی</h2>
+      <p>اطلاعات پایه رزومه‌ات رو وارد کن</p>
+      <div class="form-row">
+        <div class="form-group"><label>نام و نام خانوادگی</label><input class="input" value="${esc(p.name)}" onchange="resumeData.personal.name=this.value;autoSave()"></div>
+        <div class="form-group"><label>عنوان شغلی</label><input class="input" value="${esc(p.title)}" onchange="resumeData.personal.title=this.value;autoSave()" placeholder="مثلاً: توسعه‌دهنده فرانت‌اند"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>ایمیل</label><input class="input" type="email" value="${esc(p.email)}" onchange="resumeData.personal.email=this.value;autoSave()" dir="ltr" placeholder="example@email.com"></div>
+        <div class="form-group"><label>تلفن</label><input class="input" value="${esc(p.phone)}" onchange="resumeData.personal.phone=this.value;autoSave()" dir="ltr" placeholder="+98 912..."></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>شهر</label><input class="input" value="${esc(p.location)}" onchange="resumeData.personal.location=this.value;autoSave()" placeholder="تهران، ایران"></div>
+        <div class="form-group"><label>وبسایت</label><input class="input" value="${esc(p.website)}" onchange="resumeData.personal.website=this.value;autoSave()" dir="ltr" placeholder="https://..."></div>
+      </div>
+      <div class="form-group"><label>لینکدین</label><input class="input" value="${esc(p.linkedin)}" onchange="resumeData.personal.linkedin=this.value;autoSave()" dir="ltr" placeholder="https://linkedin.com/in/..."></div>
+      <div class="form-nav">
+        <div></div>
+        <button class="btn btn-primary" onclick="nextStep()">مرحله بعد ←</button>
+      </div>
+    </div>`;
+}
+
+// ─── Step 1: Experience ───
+function renderExperience(area) {
+  const exps = resumeData.experience;
+  area.innerHTML = `
+    <div class="form-section">
+      <h2>💼 سابقه کاری</h2>
+      <p>تجربه‌های کاریت رو اضافه کن (اختیاری)</p>
+      ${exps.map((exp, i) => `
+        <div class="entry-card">
+          <button class="entry-remove" onclick="removeExperience(${i})">✕</button>
+          <div class="form-row">
+            <div class="form-group"><label>عنوان شغلی</label><input class="input" value="${esc(exp.title)}" onchange="resumeData.experience[${i}].title=this.value;autoSave()"></div>
+            <div class="form-group"><label>شرکت</label><input class="input" value="${esc(exp.company)}" onchange="resumeData.experience[${i}].company=this.value;autoSave()"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>از تاریخ</label><input class="input" value="${esc(exp.startDate)}" onchange="resumeData.experience[${i}].startDate=this.value;autoSave()" placeholder="1402/01" dir="ltr"></div>
+            <div class="form-group"><label>تا تاریخ</label><input class="input" value="${esc(exp.endDate)}" onchange="resumeData.experience[${i}].endDate=this.value;autoSave()" placeholder="الان یا 1403/06" dir="ltr"></div>
+          </div>
+          <div class="form-group">
+            <label>توضیحات وظایف</label>
+            <textarea class="input" onchange="resumeData.experience[${i}].description=this.value;autoSave()" placeholder="وظایف و دستاوردهات رو بنویس...">${esc(exp.description)}</textarea>
+            <button class="btn btn-ai btn-sm" style="margin-top:8px" onclick="aiEnhanceExperience(${i})">✨ AI بهبود متن</button>
+          </div>
+        </div>
+      `).join('')}
+      <button class="btn btn-ghost" onclick="addExperience()" style="width:100%;justify-content:center;margin-bottom:8px">+ اضافه کردن سابقه کاری</button>
+      <div class="form-nav">
+        <button class="btn btn-ghost" onclick="prevStep()">→ مرحله قبل</button>
+        <button class="btn btn-primary" onclick="nextStep()">مرحله بعد ←</button>
+      </div>
+    </div>`;
+}
+
+function addExperience() {
+  resumeData.experience.push({ title: '', company: '', startDate: '', endDate: '', description: '' });
+  render();
+  autoSave();
+}
+function removeExperience(i) {
+  resumeData.experience.splice(i, 1);
+  render();
+  autoSave();
+}
+
+// ─── Step 2: Education ───
+function renderEducation(area) {
+  const edus = resumeData.education;
+  area.innerHTML = `
+    <div class="form-section">
+      <h2>🎓 تحصیلات</h2>
+      <p>سوابق تحصیلیت رو اضافه کن</p>
+      ${edus.map((edu, i) => `
+        <div class="entry-card">
+          <button class="entry-remove" onclick="removeEducation(${i})">✕</button>
+          <div class="form-row">
+            <div class="form-group"><label>مقطع / مدرک</label><input class="input" value="${esc(edu.degree)}" onchange="resumeData.education[${i}].degree=this.value;autoSave()" placeholder="کارشناسی"></div>
+            <div class="form-group"><label>رشته</label><input class="input" value="${esc(edu.field)}" onchange="resumeData.education[${i}].field=this.value;autoSave()" placeholder="مهندسی کامپیوتر"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>دانشگاه</label><input class="input" value="${esc(edu.school)}" onchange="resumeData.education[${i}].school=this.value;autoSave()"></div>
+            <div class="form-group"><label>سال فارغ‌التحصیلی</label><input class="input" value="${esc(edu.year)}" onchange="resumeData.education[${i}].year=this.value;autoSave()" dir="ltr" placeholder="1402"></div>
+          </div>
+          <div class="form-group"><label>توضیحات (اختیاری)</label><textarea class="input" onchange="resumeData.education[${i}].description=this.value;autoSave()" placeholder="پایان‌نامه، GPA، فعالیت‌ها...">${esc(edu.description || '')}</textarea></div>
+        </div>
+      `).join('')}
+      <button class="btn btn-ghost" onclick="addEducation()" style="width:100%;justify-content:center;margin-bottom:8px">+ اضافه کردن مدرک تحصیلی</button>
+      <div class="form-nav">
+        <button class="btn btn-ghost" onclick="prevStep()">→ مرحله قبل</button>
+        <button class="btn btn-primary" onclick="nextStep()">مرحله بعد ←</button>
+      </div>
+    </div>`;
+}
+
+function addEducation() {
+  resumeData.education.push({ degree: '', field: '', school: '', year: '', description: '' });
+  render();
+  autoSave();
+}
+function removeEducation(i) {
+  resumeData.education.splice(i, 1);
+  render();
+  autoSave();
+}
+
+// ─── Step 3: Skills ───
+function renderSkills(area) {
+  area.innerHTML = `
+    <div class="form-section">
+      <h2>🛠️ مهارت‌ها و زبان‌ها</h2>
+      <p>مهارت‌های فنی و زبان‌هایی که بلدی رو اضافه کن</p>
+      <div class="card">
+        <div class="card-header"><h3>مهارت‌های فنی</h3></div>
+        <div class="skill-input-wrap">
+          <input class="input" id="skillInput" placeholder="مهارت رو بنویس و Enter بزن..." onkeydown="if(event.key==='Enter'){addSkill();event.preventDefault()}">
+          <button class="btn btn-primary btn-sm" onclick="addSkill()">+</button>
+          <button class="btn btn-ai btn-sm" onclick="aiSuggestSkills()">✨ AI پیشنهاد</button>
+        </div>
+        <div class="skill-tags" id="skillTags">
+          ${resumeData.skills.map((s, i) => `<span class="skill-tag">${esc(s)}<button onclick="removeSkill(${i})">×</button></span>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>زبان‌ها</h3></div>
+        ${resumeData.languages.map((lang, i) => `
+          <div class="form-row" style="margin-bottom:8px">
+            <div class="form-group"><input class="input" value="${esc(lang.name)}" onchange="resumeData.languages[${i}].name=this.value;autoSave()" placeholder="زبان"></div>
+            <div class="form-group">
+              <select class="input" onchange="resumeData.languages[${i}].level=this.value;autoSave()">
+                <option value="" ${!lang.level ? 'selected' : ''}>سطح</option>
+                <option value="مبتدی" ${lang.level==='مبتدی'?'selected':''}>مبتدی</option>
+                <option value="متوسط" ${lang.level==='متوسط'?'selected':''}>متوسط</option>
+                <option value="پیشرفته" ${lang.level==='پیشرفته'?'selected':''}>پیشرفته</option>
+                <option value="زبان مادری" ${lang.level==='زبان مادری'?'selected':''}>زبان مادری</option>
+              </select>
+            </div>
+          </div>
+        `).join('')}
+        <button class="btn btn-ghost btn-sm" onclick="addLanguage()">+ اضافه کردن زبان</button>
+      </div>
+      <div class="form-nav">
+        <button class="btn btn-ghost" onclick="prevStep()">→ مرحله قبل</button>
+        <button class="btn btn-primary" onclick="nextStep()">مرحله بعد ←</button>
+      </div>
+    </div>`;
+}
+
+function addSkill() {
+  const input = document.getElementById('skillInput');
+  const val = input.value.trim();
+  if (val && !resumeData.skills.includes(val)) {
+    resumeData.skills.push(val);
+    input.value = '';
+    render();
+    autoSave();
+  }
+}
+function removeSkill(i) {
+  resumeData.skills.splice(i, 1);
+  render();
+  autoSave();
+}
+function addLanguage() {
+  resumeData.languages.push({ name: '', level: '' });
+  render();
+  autoSave();
+}
+
+// ─── Step 4: Summary ───
+function renderSummary(area) {
+  area.innerHTML = `
+    <div class="form-section">
+      <h2>📝 خلاصه حرفه‌ای</h2>
+      <p>یه معرفی کوتاه از خودت — یا بذار AI بنویسه</p>
+      <div class="form-group">
+        <textarea class="input" id="summaryInput" rows="6" onchange="resumeData.summary=this.value;autoSave()" placeholder="درباره خودت، مهارت‌ها، و اهدافت بنویس...">${esc(resumeData.summary)}</textarea>
+      </div>
+      <button class="btn btn-ai" onclick="aiGenerateSummary()" id="aiSummaryBtn">✨ AI خلاصه رو بنویسه</button>
+      <div class="form-nav" style="margin-top:24px">
+        <button class="btn btn-ghost" onclick="prevStep()">→ مرحله قبل</button>
+        <button class="btn btn-primary" onclick="nextStep()">مرحله بعد ←</button>
+      </div>
+    </div>`;
+}
+
+// ─── Step 5: Template & Export ───
+function renderTemplate(area) {
+  area.innerHTML = `
+    <div class="form-section">
+      <h2>🎨 قالب و خروجی</h2>
+      <p>قالب مورد علاقه‌ات رو انتخاب کن و رزومه رو دانلود کن</p>
+      <div class="template-grid">
+        ${['modern','classic','creative','minimal'].map(t => `
+          <div class="template-card ${resumeData.template === t ? 'selected' : ''}" onclick="selectTemplate('${t}')">
+            <div class="preview">
+              <div class="tpl-mini tpl-${t}" id="tplMini_${t}"></div>
+            </div>
+            <div class="name">${{modern:'مدرن',classic:'کلاسیک',creative:'خلاقانه',minimal:'مینیمال'}[t]}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="card" style="text-align:center">
+        <h3 style="margin-bottom:12px">پیش‌نمایش رزومه</h3>
+        <div id="previewArea" style="margin-bottom:16px"></div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-success" onclick="exportPDF()">📄 دانلود PDF</button>
+          <button class="btn btn-primary" onclick="saveNamed()">💾 ذخیره رزومه</button>
+          <button class="btn btn-ghost" onclick="previewFullscreen()">🔍 پیش‌نمایش تمام‌صفحه</button>
+        </div>
+      </div>
+      <div class="form-nav">
+        <button class="btn btn-ghost" onclick="prevStep()">→ مرحله قبل</button>
+        <button class="btn btn-ghost" onclick="goToStep(0)">🔄 شروع مجدد</button>
+      </div>
+    </div>`;
+  renderPreview();
+  renderMiniPreviews();
+}
+
+function selectTemplate(t) {
+  resumeData.template = t;
+  render();
+  autoSave();
+}
+
+function renderMiniPreviews() {
+  ['modern','classic','creative','minimal'].forEach(t => {
+    const el = document.getElementById('tplMini_' + t);
+    if (el) el.innerHTML = renderResumeHTML(t, true);
+  });
+}
+
+function renderPreview() {
+  const el = document.getElementById('previewArea');
+  if (!el) return;
+  el.innerHTML = `<div class="resume-preview"><div class="resume-page tpl-${resumeData.template}">${renderResumeHTML(resumeData.template)}</div></div>`;
+}
+
+function renderResumeHTML(tpl, mini = false) {
+  const p = resumeData.personal;
+  const exps = resumeData.experience;
+  const edus = resumeData.education;
+  const skills = resumeData.skills;
+  const langs = resumeData.languages;
+  const summary = resumeData.summary;
+
+  const contactParts = [];
+  if (p.email) contactParts.push('📧 ' + p.email);
+  if (p.phone) contactParts.push('📱 ' + p.phone);
+  if (p.location) contactParts.push('📍 ' + p.location);
+  if (p.website) contactParts.push('🌐 ' + p.website);
+  if (p.linkedin) contactParts.push('🔗 LinkedIn');
+
+  let html = `<div class="r-header">`;
+  html += `<div class="r-name">${esc(p.name) || 'نام شما'}</div>`;
+  if (p.title) html += `<div class="r-title">${esc(p.title)}</div>`;
+  html += `<div class="r-contact">${contactParts.map(c => `<span>${c}</span>`).join('')}</div>`;
+  html += `</div>`;
+
+  if (summary) {
+    html += `<div class="r-section"><div class="r-section-title">خلاصه حرفه‌ای</div><div class="r-item-desc">${esc(summary)}</div></div>`;
+  }
+
+  if (exps.length > 0) {
+    html += `<div class="r-section"><div class="r-section-title">سابقه کاری</div>`;
+    exps.forEach(exp => {
+      html += `<div class="r-item"><div class="r-item-header"><span class="r-item-title">${esc(exp.title)}</span><span class="r-item-date">${esc(exp.startDate)}${exp.endDate ? ' — ' + esc(exp.endDate) : ''}</span></div>`;
+      if (exp.company) html += `<div class="r-item-sub">${esc(exp.company)}</div>`;
+      if (exp.description) html += `<div class="r-item-desc">${esc(exp.description)}</div>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (edus.length > 0) {
+    html += `<div class="r-section"><div class="r-section-title">تحصیلات</div>`;
+    edus.forEach(edu => {
+      html += `<div class="r-item"><div class="r-item-header"><span class="r-item-title">${esc(edu.degree)} ${esc(edu.field)}</span><span class="r-item-date">${esc(edu.year)}</span></div>`;
+      if (edu.school) html += `<div class="r-item-sub">${esc(edu.school)}</div>`;
+      if (edu.description) html += `<div class="r-item-desc">${esc(edu.description)}</div>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (skills.length > 0) {
+    html += `<div class="r-section"><div class="r-section-title">مهارت‌ها</div><div class="r-skills">${skills.map(s => `<span class="r-skill">${esc(s)}</span>`).join('')}</div></div>`;
+  }
+
+  if (langs.length > 0) {
+    html += `<div class="r-section"><div class="r-section-title">زبان‌ها</div><div class="r-skills">${langs.map(l => `<span class="r-skill">${esc(l.name)}${l.level ? ' — ' + esc(l.level) : ''}</span>`).join('')}</div></div>`;
+  }
+
+  return html;
+}
+
+// ─── AI Functions ───
+async function callGemini(prompt) {
+  const key = getApiKey();
+  if (!key) { showToast('لطفاً اول کلید API رو وارد کن', 'error'); return null; }
+
+  const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
+  const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+
+  // لیست پراکسی‌ها برای دور زدن CORS
+  const proxies = [
+    null, // مستقیم (اول امتحان کن)
+    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  ];
+
+  for (const proxy of proxies) {
+    const url = proxy ? proxy(directUrl) : directUrl;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData?.error?.message || `HTTP ${res.status}`;
+        throw new Error(errMsg);
+      }
+      const data = await res.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    } catch (e) {
+      // اگه آخرین پراکسی هم خطا داد
+      if (proxy === proxies[proxies.length - 1]) {
+        showToast('خطا در اتصال به AI: ' + e.message, 'error');
+        return null;
+      }
+      // برو سراغ پراکسی بعدی
+      continue;
+    }
+  }
+}
+
+async function aiEnhanceExperience(i) {
+  const exp = resumeData.experience[i];
+  if (!exp.description) { showToast('لطفاً اول توضیحات رو بنویس', 'error'); return; }
+
+  const btn = document.querySelector(`[onclick="aiEnhanceExperience(${i})"]`);
+  btn.classList.add('loading');
+  btn.textContent = '⏳ در حال پردازش...';
+
+  const prompt = `این توضیحات یه سابقه کاری برای رزومه است. لطفاً به فارسی حرفه‌ای‌ترش کن، دستاوردها رو با عدد و رقم بیان کن، و فعل‌های قوی استفاده کن. فقط متن بهبود یافته رو برگردون، بدون توضیح اضافه:
+
+عنوان شغل: ${exp.title}
+شرکت: ${exp.company}
+توضیحات فعلی: ${exp.description}`;
+
+  const result = await callGemini(prompt);
+  btn.classList.remove('loading');
+  btn.textContent = '✨ AI بهبود متن';
+
+  if (result) {
+    resumeData.experience[i].description = result.replace(/^["']|["']$/g, '').trim();
+    render();
+    autoSave();
+    showToast('متن بهبود یافت ✨', 'success');
+  }
+}
+
+async function aiGenerateSummary() {
+  const btn = document.getElementById('aiSummaryBtn');
+  btn.classList.add('loading');
+  btn.textContent = '⏳ در حال نوشتن...';
+
+  const p = resumeData.personal;
+  const exps = resumeData.experience;
+  const skills = resumeData.skills;
+
+  const prompt = `یه خلاصه حرفه‌ای کوتاه (۳-۴ خط) برای رزومه بنویس به فارسی. فقط متن خلاصه رو برگردون:
+
+نام: ${p.name}
+عنوان شغلی: ${p.title}
+سابقه کاری: ${exps.map(e => e.title + ' در ' + e.company).join('، ') || 'ندارد'}
+مهارت‌ها: ${skills.join('، ') || 'ندارد'}
+${resumeData.summary ? 'خلاصه فعلی (بهبود بده): ' + resumeData.summary : ''}`;
+
+  const result = await callGemini(prompt);
+  btn.classList.remove('loading');
+  btn.textContent = '✨ AI خلاصه رو بنویسه';
+
+  if (result) {
+    resumeData.summary = result.replace(/^["']|["']$/g, '').trim();
+    document.getElementById('summaryInput').value = resumeData.summary;
+    autoSave();
+    showToast('خلاصه نوشته شد ✨', 'success');
+  }
+}
+
+async function aiSuggestSkills() {
+  const p = resumeData.personal;
+  const exps = resumeData.experience;
+
+  const prompt = `بر اساس این اطلاعات رزومه، ۱۰ مهارت فنی پیشنهاد بده. فقط لیست مهارت‌ها رو با کاما جدا کن، بدون شماره یا توضیح:
+
+عنوان شغلی: ${p.title || 'ندارد'}
+سابقه: ${exps.map(e => e.title).join('، ') || 'ندارد'}
+مهارت‌های فعلی: ${resumeData.skills.join('، ') || 'ندارد'}`;
+
+  const result = await callGemini(prompt);
+  if (result) {
+    const newSkills = result.split(/[,،\n]/).map(s => s.replace(/^\d+[\.\)\-]\s*/, '').replace(/^["']|["']$/g, '').trim()).filter(s => s && s.length > 1 && !resumeData.skills.includes(s));
+    resumeData.skills.push(...newSkills.slice(0, 10));
+    render();
+    autoSave();
+    showToast(`${Math.min(newSkills.length, 10)} مهارت اضافه شد ✨`, 'success');
+  }
+}
+
+// ─── Navigation ───
+function nextStep() {
+  if (currentStep < STEPS.length - 1) { currentStep++; render(); autoSave(); }
+}
+function prevStep() {
+  if (currentStep > 0) { currentStep--; render(); }
+}
+
+// ─── Auto Save ───
+async function autoSave() {
+  try { await saveToDB(); } catch (e) {}
+}
+
+// ─── Export PDF ───
+async function exportPDF() {
+  showToast('در حال ساخت PDF...', 'info');
+  const previewEl = document.querySelector('.resume-preview .resume-page');
+  if (!previewEl) { showToast('خطا: پیش‌نمایش پیدا نشد', 'error'); return; }
+
+  try {
+    const canvas = await html2canvas(previewEl, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      direction: 'rtl'
+    });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgData = canvas.toDataURL('image/png');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`resume-${resumeData.personal.name || 'my'}.pdf`);
+    showToast('PDF دانلود شد 📄', 'success');
+  } catch (e) {
+    showToast('خطا در ساخت PDF: ' + e.message, 'error');
+  }
+}
+
+// ─── Save Named ───
+async function saveNamed() {
+  const name = resumeData.personal.name || 'رزومه بدون نام';
+  await saveNamedResume(name + ' — ' + new Date().toLocaleDateString('fa'));
+}
+
+// ─── My Resumes ───
+async function showMyResumes() {
+  const resumes = await loadNamedResumes();
+  if (resumes.length === 0) {
+    showModal(`<h3>📋 رزومه‌های من</h3><div class="empty"><div class="icon">📄</div><p>هنوز رزومه‌ای ذخیره نشده</p></div><div style="text-align:center;margin-top:16px"><button class="btn btn-ghost" onclick="closeModal()">بستن</button></div>`);
+    return;
+  }
+  showModal(`
+    <h3>📋 رزومه‌های من</h3>
+    <div class="resume-list">
+      ${resumes.map(r => `
+        <div class="resume-item">
+          <div class="resume-item-info">
+            <div class="resume-item-icon">📄</div>
+            <div>
+              <div class="resume-item-name">${esc(r.name)}</div>
+              <div class="resume-item-date">${new Date(r.createdAt).toLocaleDateString('fa')}</div>
+            </div>
+          </div>
+          <div class="resume-item-actions">
+            <button class="btn btn-sm btn-primary" onclick="loadSavedResume('${r.id}')">بارگذاری</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSavedResume('${r.id}')">حذف</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="text-align:center;margin-top:16px"><button class="btn btn-ghost" onclick="closeModal()">بستن</button></div>
+  `);
+}
+
+async function loadSavedResume(id) {
+  const item = await loadResumeData(id);
+  if (item) {
+    resumeData = item.data;
+    currentStep = 0;
+    closeModal();
+    render();
+    showToast('رزومه بارگذاری شد ✅', 'success');
+  }
+}
+
+async function deleteSavedResume(id) {
+  if (confirm('مطمئنی میخوای حذف کنی؟')) {
+    await deleteNamedResume(id);
+    showToast('حذف شد', 'info');
+    showMyResumes();
+  }
+}
+
+// ─── Preview Fullscreen ───
+function previewFullscreen() {
+  showModal(`
+    <div style="text-align:center;margin-bottom:16px">
+      <button class="btn btn-success btn-sm" onclick="exportPDF()">📄 دانلود PDF</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕ بستن</button>
+    </div>
+    <div class="resume-preview" style="margin:0 auto"><div class="resume-page tpl-${resumeData.template}">${renderResumeHTML(resumeData.template)}</div></div>
+  `);
+}
+
+// ─── Utils ───
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ─── Init ───
+async function init() {
+  loadTheme();
+  updateApiStatus();
+  await openDB();
+  const saved = await loadFromDB();
+  if (saved) resumeData = saved;
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
