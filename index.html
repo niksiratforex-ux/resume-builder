@@ -237,21 +237,20 @@ select.input{cursor:pointer}
   </header>
 
   <div class="main">
-    <!-- ═══ API KEY ═══ -->
-    <div class="api-bar" id="apiBar">
+    <!-- ═══ AI STATUS ═══ -->
+    <div class="api-bar" id="aiBar">
       <div class="api-status none" id="apiStatus"></div>
-      <label>🔑 کلید Gemini API:</label>
-      <input type="password" class="input" id="apiKeyInput" placeholder="AIza..." dir="ltr">
+      <label>🔑 کلید Groq:</label>
+      <input type="password" class="input" id="apiKeyInput" placeholder="gsk_..." dir="ltr">
       <button class="btn btn-sm btn-ghost" onclick="saveApiKey()">ذخیره</button>
-      <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn-sm btn-ghost">دریافت رایگان ↗</a>
+      <button class="btn btn-sm btn-ghost" onclick="testAI()">🔌 تست</button>
+      <a href="https://console.groq.com/keys" target="_blank" class="btn btn-sm btn-ghost">دریافت رایگان ↗</a>
     </div>
     <div class="api-bar" id="workerBar">
       <div class="api-status ${customProxyUrl ? 'ok' : 'none'}" id="workerStatus"></div>
-      <label>☁️ Cloudflare Worker:</label>
+      <label>☁️ پراکسی (اختیاری):</label>
       <input type="text" class="input" id="workerUrlInput" placeholder="https://your-worker.workers.dev/?url=" dir="ltr" value="${esc(customProxyUrl)}">
       <button class="btn btn-sm btn-ghost" onclick="saveWorkerUrl()">ذخیره</button>
-      <button class="btn btn-sm btn-ghost" onclick="testWorker()">🔌 تست</button>
-      <a href="https://github.com/niksiratforex-ux/Ai_Chat_With_Api" target="_blank" class="btn btn-sm btn-ghost">راهنما ↗</a>
     </div>
 
     <!-- ═══ STEPPER ═══ -->
@@ -373,11 +372,11 @@ async function loadResumeData(id) {
 }
 
 // ─── API Key ───
-function getApiKey() { return localStorage.getItem('gemini_api_key') || ''; }
+function getApiKey() { return localStorage.getItem('groq_api_key') || ''; }
 function saveApiKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
   if (key) {
-    localStorage.setItem('gemini_api_key', key);
+    localStorage.setItem('groq_api_key', key);
     updateApiStatus();
     showToast('کلید ذخیره شد ✅', 'success');
   }
@@ -386,7 +385,7 @@ function updateApiStatus() {
   const s = document.getElementById('apiStatus');
   const key = getApiKey();
   s.className = 'api-status ' + (key ? 'ok' : 'none');
-  document.getElementById('apiKeyInput').value = key;
+  if (document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = key;
 }
 
 function saveWorkerUrl() {
@@ -397,14 +396,12 @@ function saveWorkerUrl() {
   showToast('آدرس Worker ذخیره شد ✅', 'success');
 }
 
-async function testWorker() {
+async function testAI() {
   const key = getApiKey();
-  if (!key) { showToast('لطفاً اول کلید API رو وارد کن', 'error'); return; }
-  if (!customProxyUrl) { showToast('لطفاً اول آدرس Worker رو وارد کن', 'error'); return; }
-
-  showToast('در حال تست...', 'info');
+  if (!key) { showToast('لطفاً اول کلید Groq رو وارد کن', 'error'); return; }
+  showToast('در حال تست اتصال...', 'info');
   try {
-    const result = await callGemini('سلام! فقط بنویس: اتصال موفق');
+    const result = await callAI('سلام! فقط بنویس: اتصال موفق ✅');
     if (result) showToast('✅ اتصال موفق! AI پاسخ داد.', 'success');
   } catch (e) {
     showToast('❌ خطا: ' + e.message, 'error');
@@ -849,18 +846,26 @@ async function smartFetch(url, opts = {}) {
   }
 }
 
-// ─── AI Functions ───
-async function callGemini(prompt) {
+// ─── AI Functions (Groq — رایگان، سریع) ───
+async function callAI(prompt) {
   const key = getApiKey();
-  if (!key) { showToast('لطفاً اول کلید API رو وارد کن', 'error'); return null; }
+  if (!key) { showToast('لطفاً اول کلید Groq رو وارد کن (از console.groq.com/keys)', 'error'); return null; }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-  const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
+  const body = JSON.stringify({
+    model: 'llama-3.3-70b-versatile',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.7,
+    max_tokens: 2048
+  });
 
   try {
     const res = await smartFetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key
+      },
       body: body
     });
     if (!res.ok) {
@@ -868,7 +873,7 @@ async function callGemini(prompt) {
       throw new Error(errData?.error?.message || `HTTP ${res.status}`);
     }
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    return data.choices?.[0]?.message?.content || null;
   } catch (e) {
     showToast('خطا در اتصال به AI: ' + e.message, 'error');
     return null;
@@ -889,7 +894,7 @@ async function aiEnhanceExperience(i) {
 شرکت: ${exp.company}
 توضیحات فعلی: ${exp.description}`;
 
-  const result = await callGemini(prompt);
+  const result = await callAI(prompt);
   btn.classList.remove('loading');
   btn.textContent = '✨ AI بهبود متن';
 
@@ -918,7 +923,7 @@ async function aiGenerateSummary() {
 مهارت‌ها: ${skills.join('، ') || 'ندارد'}
 ${resumeData.summary ? 'خلاصه فعلی (بهبود بده): ' + resumeData.summary : ''}`;
 
-  const result = await callGemini(prompt);
+  const result = await callAI(prompt);
   btn.classList.remove('loading');
   btn.textContent = '✨ AI خلاصه رو بنویسه';
 
@@ -940,7 +945,7 @@ async function aiSuggestSkills() {
 سابقه: ${exps.map(e => e.title).join('، ') || 'ندارد'}
 مهارت‌های فعلی: ${resumeData.skills.join('، ') || 'ندارد'}`;
 
-  const result = await callGemini(prompt);
+  const result = await callAI(prompt);
   if (result) {
     const newSkills = result.split(/[,،\n]/).map(s => s.replace(/^\d+[\.\)\-]\s*/, '').replace(/^["']|["']$/g, '').trim()).filter(s => s && s.length > 1 && !resumeData.skills.includes(s));
     resumeData.skills.push(...newSkills.slice(0, 10));
