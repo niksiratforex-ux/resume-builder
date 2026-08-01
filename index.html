@@ -245,6 +245,14 @@ select.input{cursor:pointer}
       <button class="btn btn-sm btn-ghost" onclick="saveApiKey()">ذخیره</button>
       <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn-sm btn-ghost">دریافت رایگان ↗</a>
     </div>
+    <div class="api-bar" id="workerBar">
+      <div class="api-status ${customProxyUrl ? 'ok' : 'none'}" id="workerStatus"></div>
+      <label>☁️ Cloudflare Worker:</label>
+      <input type="text" class="input" id="workerUrlInput" placeholder="https://your-worker.workers.dev/?url=" dir="ltr" value="${esc(customProxyUrl)}">
+      <button class="btn btn-sm btn-ghost" onclick="saveWorkerUrl()">ذخیره</button>
+      <button class="btn btn-sm btn-ghost" onclick="testWorker()">🔌 تست</button>
+      <a href="https://github.com/niksiratforex-ux/Ai_Chat_With_Api" target="_blank" class="btn btn-sm btn-ghost">راهنما ↗</a>
+    </div>
 
     <!-- ═══ STEPPER ═══ -->
     <div class="stepper" id="stepper"></div>
@@ -379,6 +387,28 @@ function updateApiStatus() {
   const key = getApiKey();
   s.className = 'api-status ' + (key ? 'ok' : 'none');
   document.getElementById('apiKeyInput').value = key;
+}
+
+function saveWorkerUrl() {
+  const url = document.getElementById('workerUrlInput').value.trim();
+  setWorkerUrl(url);
+  const s = document.getElementById('workerStatus');
+  s.className = 'api-status ' + (customProxyUrl ? 'ok' : 'none');
+  showToast('آدرس Worker ذخیره شد ✅', 'success');
+}
+
+async function testWorker() {
+  const key = getApiKey();
+  if (!key) { showToast('لطفاً اول کلید API رو وارد کن', 'error'); return; }
+  if (!customProxyUrl) { showToast('لطفاً اول آدرس Worker رو وارد کن', 'error'); return; }
+
+  showToast('در حال تست...', 'info');
+  try {
+    const result = await callGemini('سلام! فقط بنویس: اتصال موفق');
+    if (result) showToast('✅ اتصال موفق! AI پاسخ داد.', 'success');
+  } catch (e) {
+    showToast('❌ خطا: ' + e.message, 'error');
+  }
 }
 
 // ─── Theme ───
@@ -749,45 +779,99 @@ function renderResumeHTML(tpl, mini = false) {
   return html;
 }
 
+// ─── Cloudflare Worker Proxy ───
+let customProxyUrl = localStorage.getItem('cf_worker_url') || '';
+
+function getWorkerUrl() { return customProxyUrl; }
+function setWorkerUrl(url) {
+  customProxyUrl = url.replace(/\/?$/, '').replace(/\?url=$/, '');
+  if (customProxyUrl && !customProxyUrl.endsWith('?url=')) {
+    customProxyUrl += '?url=';
+  }
+  localStorage.setItem('cf_worker_url', customProxyUrl);
+}
+
+// ─── Smart Fetch (از Ai_Chat_With_Api) ───
+async function smartFetch(url, opts = {}) {
+  const isPost = opts.method && opts.method.toUpperCase() === 'POST';
+  const body = opts.body;
+
+  // مرحله ۱: Worker proxy (اولویت اول — تنها راه مطمئن برای POST از file://)
+  if (customProxyUrl) {
+    try {
+      const proxyUrl = customProxyUrl + encodeURIComponent(url);
+      const fetchOpts = { method: opts.method || 'GET' };
+      if (body) fetchOpts.body = body;
+      if (opts.headers) fetchOpts.headers = opts.headers;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 30000);
+      fetchOpts.signal = ctrl.signal;
+      const r = await fetch(proxyUrl, fetchOpts);
+      clearTimeout(timer);
+      if (r.status === 502) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error('Worker خطا: ' + (err.error || 'HTTP 502'));
+      }
+      if (!r.ok) {
+        const errBody = await r.text().catch(() => '');
+        try {
+          const errJson = JSON.parse(errBody);
+          if (errJson._proxy && errJson._error) {
+            try {
+              const apiErrJson = JSON.parse(errJson._error);
+              throw new Error('API خطا: ' + (apiErrJson.error?.message || apiErrJson.message || errJson._error));
+            } catch (pe) {
+              if (pe.message.startsWith('API خطا')) throw pe;
+              throw new Error('API خطا: ' + errJson._error.slice(0, 200));
+            }
+          }
+          if (errJson.error) throw new Error('API خطا: ' + (typeof errJson.error === 'string' ? errJson.error : errJson.error.message));
+        } catch (parseErr) {
+          if (parseErr.message.startsWith('API خطا')) throw parseErr;
+        }
+        throw new Error('Worker HTTP ' + r.status);
+      }
+      return r;
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('timeout');
+      console.log('[Worker] failed:', e.message);
+      // اگه Worker بود ولی خطا داد، مستقیم امتحان نکن (CORS بلاک میشه)
+      throw new Error('Worker خطا: ' + e.message);
+    }
+  }
+
+  // مرحله ۲: مستقیم (فقط اگه Worker نداری)
+  try {
+    return await fetch(url, opts);
+  } catch (e) {
+    console.log('[Direct] failed:', e.message);
+    throw new Error('CORS خطا — لطفاً Cloudflare Worker رو تنظیم کن');
+  }
+}
+
 // ─── AI Functions ───
 async function callGemini(prompt) {
   const key = getApiKey();
   if (!key) { showToast('لطفاً اول کلید API رو وارد کن', 'error'); return null; }
 
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
   const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
-  const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
 
-  // لیست پراکسی‌ها برای دور زدن CORS
-  const proxies = [
-    null, // مستقیم (اول امتحان کن)
-    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  ];
-
-  for (const proxy of proxies) {
-    const url = proxy ? proxy(directUrl) : directUrl;
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: body
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        const errMsg = errData?.error?.message || `HTTP ${res.status}`;
-        throw new Error(errMsg);
-      }
-      const data = await res.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-    } catch (e) {
-      // اگه آخرین پراکسی هم خطا داد
-      if (proxy === proxies[proxies.length - 1]) {
-        showToast('خطا در اتصال به AI: ' + e.message, 'error');
-        return null;
-      }
-      // برو سراغ پراکسی بعدی
-      continue;
+  try {
+    const res = await smartFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
     }
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+  } catch (e) {
+    showToast('خطا در اتصال به AI: ' + e.message, 'error');
+    return null;
   }
 }
 
@@ -978,6 +1062,12 @@ function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.
 async function init() {
   loadTheme();
   updateApiStatus();
+  // Worker URL
+  customProxyUrl = localStorage.getItem('cf_worker_url') || '';
+  const workerInput = document.getElementById('workerUrlInput');
+  if (workerInput) workerInput.value = customProxyUrl;
+  const ws = document.getElementById('workerStatus');
+  if (ws) ws.className = 'api-status ' + (customProxyUrl ? 'ok' : 'none');
   await openDB();
   const saved = await loadFromDB();
   if (saved) resumeData = saved;
